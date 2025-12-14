@@ -1,5 +1,16 @@
 use windows::{
-    Win32::{Foundation::*, System::LibraryLoader::GetModuleHandleW, UI::WindowsAndMessaging::*},
+    Win32::{
+        Foundation::*,
+        Graphics::{
+            Dwm::{
+                DWMSBT_MAINWINDOW, DWMWA_SYSTEMBACKDROP_TYPE, DwmExtendFrameIntoClientArea,
+                DwmSetWindowAttribute,
+            },
+            Gdi::{COLOR_WINDOW, COLOR_WINDOWFRAME, HBRUSH},
+        },
+        System::LibraryLoader::GetModuleHandleW,
+        UI::{Controls::MARGINS, WindowsAndMessaging::*},
+    },
     core::*,
 };
 
@@ -34,6 +45,7 @@ impl Window {
                 hCursor: LoadCursorW(None, IDC_ARROW)?,
                 hInstance: instance.into(),
                 lpszClassName: class_name,
+                hbrBackground: HBRUSH(COLOR_WINDOWFRAME.0 as _),
 
                 style: CS_HREDRAW | CS_VREDRAW,
 
@@ -88,6 +100,26 @@ impl Window {
     pub fn show(&self) {
         unsafe {
             ShowWindow(self.handle, SW_SHOW);
+        }
+    }
+
+    pub fn use_mica(&self) {
+        unsafe {
+            let margins = MARGINS {
+                cxLeftWidth: -1, // -1 means "Entire Window"
+                cxRightWidth: -1,
+                cyTopHeight: -1,
+                cyBottomHeight: -1,
+            };
+
+            // This removes the black background and lets Mica show through
+            _ = DwmExtendFrameIntoClientArea(self.handle, &margins);
+            _ = DwmSetWindowAttribute(
+                self.handle,
+                DWMWA_SYSTEMBACKDROP_TYPE,
+                &DWMSBT_MAINWINDOW as *const _ as _,
+                std::mem::size_of::<i32>() as u32,
+            );
         }
     }
 

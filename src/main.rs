@@ -38,7 +38,7 @@ fn insert_stuff(host: &mut CompositionHost, x: f32, y: f32) {
         .CreateColorBrushWithColor(Colors::Red().unwrap())
         .unwrap();
     element.SetBrush(&brush).unwrap();
-    element.SetSize(Vector2::new(100.0, 100.0)).unwrap();
+    element.SetSize(Vector2::new(64.0, 64.0)).unwrap();
     element.SetOffset(Vector3::new(x, y, 0.0)).unwrap();
 
     let animation = host.compositor.CreateVector3KeyFrameAnimation().unwrap();
@@ -49,9 +49,6 @@ fn insert_stuff(host: &mut CompositionHost, x: f32, y: f32) {
 
     animation
         .SetDuration(Duration::from_secs(2).into())
-        .unwrap();
-    animation
-        .SetDelayTime(Duration::from_secs(3).into())
         .unwrap();
     element
         .StartAnimation(&"Offset".into(), &animation)
@@ -69,28 +66,26 @@ fn main() -> Result<()> {
 
     let options = WindowOptions::builder().build();
     let mut window = Window::new(options).expect("Unable to create window");
+    window.use_mica();
+
     let mut composition_host = CompositionHost::new(window.handle)?;
+    composition_host.init_root().unwrap();
 
     insert_stuff(&mut composition_host, 0.0, 0.0);
-    insert_stuff(&mut composition_host, 0.0, 200.0);
+    insert_stuff(&mut composition_host, 100.0, 0.0);
     insert_stuff(&mut composition_host, 200.0, 0.0);
 
     window.show();
 
-    window.run(move |hwnd, message, _, _| match message {
+    window.run(move |hwnd, message, wparam, lparam| match message {
         WM_QUIT => {
             composition_host.close();
             None
         }
-        WM_PAINT => {
-            unsafe {
-                let mut ps = mem::zeroed();
-                let hdc = BeginPaint(hwnd, &mut ps);
-                // TODO: Add any drawing code that uses hdc here...
-                EndPaint(hwnd, &mut ps);
-            }
-            None
-        }
+        // WM_ERASEBKGND => {
+        //     // Return 1 (true) to say "I handled it" (by doing nothing)
+        //     Some(LRESULT(1))
+        // }
         WM_KEYDOWN => {
             insert_stuff(&mut composition_host, random(), random());
             println!("Adding shit");

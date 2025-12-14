@@ -30,11 +30,6 @@ impl CompositionHost {
             let interop: ICompositorDesktopInterop = compositor.cast()?;
             let target = interop.CreateDesktopWindowTarget(hwnd, false)?;
 
-            let root = compositor.CreateContainerVisual()?;
-            root.SetRelativeSizeAdjustment(Vector2::one())?;
-            // root.Offset({ 124, 12, 0 });
-            target.SetRoot(&root).unwrap();
-
             Ok(Self {
                 compositor,
                 dispatcher_queue_controller: controller,
@@ -43,9 +38,18 @@ impl CompositionHost {
         }
     }
 
+    pub fn init_root(&mut self) -> Result<()> {
+        let root = self.compositor.CreateContainerVisual()?;
+        root.SetRelativeSizeAdjustment(Vector2::one())?;
+        self.target.SetRoot(&root).unwrap();
+        Ok(())
+    }
+
     pub fn close(&mut self) {
         self.target.Close().unwrap();
-        self.dispatcher_queue_controller.ShutdownQueueAsync().unwrap();
+        self.dispatcher_queue_controller
+            .ShutdownQueueAsync()
+            .unwrap();
         self.compositor.Close().unwrap();
     }
 }
