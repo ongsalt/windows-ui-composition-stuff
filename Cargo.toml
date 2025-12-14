@@ -1,0 +1,18 @@
+[package]
+name = "windows-ui-composition"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bon = "3.8.1"
+windows = { version = "0.62.2", features = [
+  "Win32_Foundation",
+  "Win32_System_LibraryLoader",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_Graphics_Gdi",
+  "System",
+  "Win32_System_WinRT",
+  "Win32_System_WinRT_Composition",
+  "UI_Composition",
+  "UI_Composition_Desktop"
+] }
