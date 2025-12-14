@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 bon = "3.8.1"
+rand = "0.9.2"
 windows = { version = "0.62.2", features = [
   "Win32_Foundation",
   "Win32_System_LibraryLoader",
@@ -16,3 +17,4 @@ windows = { version = "0.62.2", features = [
   "UI_Composition",
   "UI_Composition_Desktop"
 ] }
+windows-numerics = "0.3.1"

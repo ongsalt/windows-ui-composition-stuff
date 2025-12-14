@@ -79,8 +79,15 @@ impl Window {
 
             let mut message = MSG::default();
             while GetMessageW(&mut message, None, 0, 0).into() {
+                _ = TranslateMessage(&message);
                 DispatchMessageW(&message);
             }
+        }
+    }
+
+    pub fn show(&self) {
+        unsafe {
+            ShowWindow(self.handle, SW_SHOW);
         }
     }
 
@@ -102,11 +109,6 @@ impl Window {
             }
 
             match message {
-                WM_PAINT => {
-                    // println!("WM_PAINT");
-                    // _ = ValidateRect(Some(window), None);
-                    LRESULT(0)
-                }
                 WM_DESTROY => {
                     PostQuitMessage(0);
                     LRESULT(0)

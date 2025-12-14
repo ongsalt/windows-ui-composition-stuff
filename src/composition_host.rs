@@ -8,6 +8,7 @@ use windows::Win32::System::WinRT::{
 };
 use windows::core::Interface;
 use windows::core::Result;
+use windows_numerics::{Vector2, Vector3};
 
 pub struct CompositionHost {
     pub compositor: Compositor,
@@ -29,6 +30,11 @@ impl CompositionHost {
             let interop: ICompositorDesktopInterop = compositor.cast()?;
             let target = interop.CreateDesktopWindowTarget(hwnd, false)?;
 
+            let root = compositor.CreateContainerVisual()?;
+            root.SetRelativeSizeAdjustment(Vector2::one())?;
+            // root.Offset({ 124, 12, 0 });
+            target.SetRoot(&root).unwrap();
+
             Ok(Self {
                 compositor,
                 dispatcher_queue_controller: controller,
@@ -38,9 +44,9 @@ impl CompositionHost {
     }
 
     pub fn close(&mut self) {
-        self.target.Close();
-        self.dispatcher_queue_controller.ShutdownQueueAsync();
-        self.compositor.Close();
+        self.target.Close().unwrap();
+        self.dispatcher_queue_controller.ShutdownQueueAsync().unwrap();
+        self.compositor.Close().unwrap();
     }
 }
 
