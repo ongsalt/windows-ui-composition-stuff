@@ -16,6 +16,7 @@ windows = { version = "0.62.2", features = [
   "Win32_Graphics_Dwm",
   "Win32_UI_WindowsAndMessaging",
   "Win32_UI_Controls",
+  "Win32_UI_HiDpi",
   "UI_Composition",
   "UI_Composition_Desktop",
   "UI_Text",

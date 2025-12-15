@@ -123,6 +123,8 @@ impl Window {
                 cyBottomHeight: -1,
             };
 
+            // SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
             // This removes the black background and lets Mica show through
             _ = DwmExtendFrameIntoClientArea(self.handle, &margins);
             _ = DwmSetWindowAttribute(
