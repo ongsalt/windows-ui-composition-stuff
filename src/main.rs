@@ -8,6 +8,7 @@ use windows_numerics::{Vector2, Vector3};
 use crate::{
     composition_host::CompositionHost,
     kit::{
+        math::SizePreference,
         node::DivNode,
         renderer::{RenderContext, Renderer},
     },
@@ -34,19 +35,28 @@ fn main() -> Result<()> {
 
     let root_node = {
         let mut div = DivNode::new(&mut ctx);
+        div.set_prefered_w(SizePreference::FillAvailable);
+        div.set_prefered_h(SizePreference::FillAvailable);
         // div.set_background_color(Colors::Red().unwrap(), &mut ctx);
-        div.set_border_width(10.0);
-        div.set_corner_radius(18.0);
-        div.set_border_color(Colors::Gray().unwrap(), &mut ctx);
+
+        let mut div2 = DivNode::new(&mut ctx);
+        div2.set_prefered_h(SizePreference::Fixed(48.0));
+        div2.set_prefered_w(SizePreference::Fixed(48.0));
+        div2.set_background_color(Colors::White().unwrap(), &mut ctx);
+        div2.set_border_width(1.0);
+        div2.set_border_color(Colors::LightGray().unwrap(), &mut ctx);
+        div2.set_corner_radius(8.0);
+
+        div.add_children(div2);
         div
     };
 
     let (w, h) = window.size();
     let mut renderer = Renderer::new(composition_host, Box::new(root_node), (w - 16.0, h - 30.0)); // wtf
     renderer.update();
-    
+
     window.show();
-    
+
     window.run(move |hwnd, message, wparam, lparam| match message {
         WM_QUIT => {
             renderer.close();

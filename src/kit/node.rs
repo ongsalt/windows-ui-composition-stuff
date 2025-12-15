@@ -17,7 +17,7 @@ use windows::{
 };
 use windows_numerics::{Vector2, Vector3};
 
-use crate::kit::math::{rect_offset, rect_size};
+use crate::kit::math::{SizePreference, rect_offset, rect_size};
 use crate::kit::renderer::RenderContext;
 
 #[derive(Debug, Clone, Copy)]
@@ -37,12 +37,19 @@ impl Contraints {
             min_h: 0.0,
         }
     }
+
+    pub fn coerce(&self, size: Vector2) -> Vector2 {
+        Vector2::new(
+            size.X.clamp(self.min_w, self.max_w),
+            size.Y.clamp(self.min_h, self.max_h),
+        )
+    }
 }
 
 // know absolute position
 pub trait Node: Debug {
     // size
-    fn measure(&mut self, contraints: Contraints) -> Vector2;
+    fn measure(&mut self, constraints: Contraints) -> Vector2;
     fn place(&mut self, rect: Rect);
     fn get_visual(&self) -> Visual;
 }
@@ -56,7 +63,7 @@ pub struct TextNode {
 // WrapperNode, node without its own visual
 
 impl Node for TextNode {
-    fn measure(&mut self, contraints: Contraints) -> Vector2 {
+    fn measure(&mut self, constraints: Contraints) -> Vector2 {
         todo!()
     }
 
@@ -90,7 +97,9 @@ pub struct DivNode {
     bg_rect_obj: CompositionSpriteShape,
 
     // actual rect
-    prefered_size: Vector2,
+    prefered_w: SizePreference,
+    prefered_h: SizePreference,
+
     offset: Vector2,
 
     // Preferences
@@ -113,6 +122,7 @@ impl DivNode {
     pub fn new(ctx: &mut RenderContext) -> Self {
         let visual = ctx.compositor.CreateLayerVisual().unwrap();
         let bg_visual = ctx.compositor.CreateShapeVisual().unwrap();
+
         let bg_geometry = ctx.compositor.CreateRoundedRectangleGeometry().unwrap();
 
         let bg_rect_obj = ctx
@@ -138,7 +148,8 @@ impl DivNode {
             visual,
             bg_geometry,
             bg_rect_obj,
-            prefered_size: Vector2::zero(),
+            prefered_w: SizePreference::Default,
+            prefered_h: SizePreference::Default,
             offset: Vector2::zero(),
             background_color,
             corner_radius: 0.0,
@@ -152,13 +163,13 @@ impl DivNode {
     }
 
     // TODO: implement all of SwayRenderer method
-    pub fn add_children(&mut self, node: Box<dyn Node>) {
+    pub fn add_children<N: Node + 'static>(&mut self, node: N) {
         self.visual
             .Children()
             .unwrap()
             .InsertAtTop(&node.get_visual())
             .unwrap();
-        self.children.push(node);
+        self.children.push(Box::new(node));
     }
 
     pub fn remove_child(&mut self, index: usize) {
@@ -171,6 +182,7 @@ impl DivNode {
             .unwrap();
     }
 
+    // TODO: padding, margin
     pub fn offset(&self) -> Vector2 {
         self.offset
     }
@@ -201,13 +213,6 @@ impl DivNode {
 
     pub fn set_offset(&mut self, offset: Vector2) {
         self.offset = offset;
-        // update underlying visual offset (Z = 0.0)
-        let v = Vector3 {
-            X: offset.X,
-            Y: offset.Y,
-            Z: 0.0,
-        };
-        let _ = self.visual.SetOffset(v);
     }
 
     pub fn set_corner_radius(&mut self, corner_radius: f32) {
@@ -248,15 +253,35 @@ impl DivNode {
     pub fn set_border_color(&mut self, border_color: Color, ctx: &mut RenderContext) {
         self.border_color = border_color;
         if let Ok(brush) = ctx.compositor.CreateColorBrushWithColor(border_color) {
-            let _ = self.bg_rect_obj.SetStrokeBrush(&brush);
+            self.set_border_brush(brush.cast().unwrap())
         }
+    }
+
+    pub fn set_border_brush(&mut self, brush: CompositionBrush) {
+        let _ = self.bg_rect_obj.SetStrokeBrush(&brush);
+    }
+
+    pub fn prefered_h(&self) -> SizePreference {
+        self.prefered_h
+    }
+
+    pub fn prefered_w(&self) -> SizePreference {
+        self.prefered_w
+    }
+
+    pub fn set_prefered_h(&mut self, prefered_h: SizePreference) {
+        self.prefered_h = prefered_h;
+        // TODO: mark relayout
+    }
+
+    pub fn set_prefered_w(&mut self, prefered_w: SizePreference) {
+        self.prefered_w = prefered_w;
+        // TODO: mark relayout
     }
 }
 
 impl Node for DivNode {
-    fn measure(&mut self, contraints: Contraints) -> Vector2 {
-        return Vector2::new(contraints.max_w, contraints.max_h);
-
+    fn measure(&mut self, constraints: Contraints) -> Vector2 {
         self.measured_children_sizes.clear();
 
         // TODO: sizing mode
@@ -264,7 +289,7 @@ impl Node for DivNode {
         let mut h = 0.0;
         // just assume its z stack
         for c in &mut self.children {
-            let size = c.measure(contraints);
+            let size = c.measure(constraints);
             // TODO: cache this size
             if size.X > w {
                 w = size.X
@@ -275,13 +300,32 @@ impl Node for DivNode {
             self.measured_children_sizes.push(size);
         }
 
-        Vector2::new(w, h)
+        let s = Vector2::new(
+            self.prefered_w
+                .compute(w, constraints.min_w, constraints.max_w)
+                + 2. * self.border_width,
+            self.prefered_h
+                .compute(h, constraints.min_h, constraints.max_h)
+                + 2. * self.border_width,
+        );
+        // println!("s: {:.?}", s);
+        s
     }
 
     // rect is relative to parent
     fn place(&mut self, rect: Rect) {
         let size = rect_size(&rect);
-        self.bg_geometry.SetSize(size).unwrap();
+        let size_with_border = Vector2::new(
+            size.X - 2. * self.border_width,
+            size.Y - 2. * self.border_width,
+        );
+        self.bg_geometry.SetSize(size_with_border).unwrap();
+        self.bg_geometry
+            .SetOffset(Vector2::new(
+                self.border_width / 2.0,
+                self.border_width / 2.0,
+            ))
+            .unwrap();
         // println!("rect size: {:.?}", rect_size(&rect));
         self.visual.SetSize(size).unwrap();
         self.visual.SetOffset(rect_offset(&rect)).unwrap();

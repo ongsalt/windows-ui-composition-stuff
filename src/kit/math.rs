@@ -30,3 +30,21 @@ impl Size {
         Self::Absolute { w, h }
     }
 }
+
+// I shuold probably use layout engine library
+#[derive(Debug, Clone, Copy)]
+pub enum SizePreference {
+    Default,
+    FillAvailable,
+    Fixed(f32),
+}
+
+impl SizePreference {
+    pub fn compute(&self, computed: f32, min: f32, max: f32) -> f32 {
+        match self {
+            SizePreference::Default => computed.clamp(min, max),
+            SizePreference::FillAvailable => max,
+            SizePreference::Fixed(i) => *i,
+        }
+    }
+}
