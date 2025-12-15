@@ -3,7 +3,6 @@ use windows::{
     Win32::{Foundation::*, UI::WindowsAndMessaging::*},
     core::*,
 };
-use windows_numerics::{Vector2, Vector3};
 
 use crate::{
     composition_host::CompositionHost,
@@ -40,14 +39,14 @@ fn main() -> Result<()> {
         // div.set_background_color(Colors::Red().unwrap(), &mut ctx);
 
         let mut create_smth = || {
-            let mut div = DivNode::new(&mut ctx);
-            div.set_prefered_h(SizePreference::Fixed(64.0));
-            div.set_prefered_w(SizePreference::Fixed(64.0));
-            div.set_background_color(Colors::White().unwrap(), &mut ctx);
-            div.set_border_width(1.0);
-            div.set_border_color(Colors::LightGray().unwrap(), &mut ctx);
-            div.set_corner_radius(12.0);
-            div
+            let mut node = DivNode::new(&mut ctx);
+            node.set_prefered_h(SizePreference::Fixed(64.0));
+            node.set_prefered_w(SizePreference::Fixed(64.0));
+            node.set_background_color(Colors::White().unwrap(), &mut ctx);
+            node.set_border_width(1.0);
+            node.set_border_color(Colors::LightGray().unwrap(), &mut ctx);
+            node.set_corner_radius(12.0);
+            node
         };
 
         div.add_children(create_smth());

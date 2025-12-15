@@ -122,20 +122,6 @@ impl DivNode {
     pub fn new(ctx: &mut RenderContext) -> Self {
         let visual = ctx.compositor.CreateLayerVisual().unwrap();
         let bg_visual = ctx.compositor.CreateShapeVisual().unwrap();
-        // let debug_visual = {
-        //     let v = ctx.compositor.CreateSpriteVisual().unwrap();
-        //     let c = Color {
-        //         R: 255,
-        //         A: 50,
-        //         B: 0,
-        //         G: 0,
-        //     };
-        //     let b = ctx.compositor.CreateColorBrushWithColor(c).unwrap();
-        //     v.SetBrush(&b).unwrap();
-        //     v.SetRelativeSizeAdjustment(Vector2::one()).unwrap();
-        //     v
-        // };
-        // visual.Children().unwrap().InsertAtBottom(&debug_visual).unwrap();
 
         let bg_geometry = ctx.compositor.CreateRoundedRectangleGeometry().unwrap();
 
