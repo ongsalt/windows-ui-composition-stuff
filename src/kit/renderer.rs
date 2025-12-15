@@ -27,7 +27,8 @@ impl Renderer {
         container
             .Children()
             .unwrap()
-            .InsertAtTop(&root.get_visual());
+            .InsertAtTop(&root.get_visual())
+            .unwrap();
         Self {
             composition_host,
             root,
@@ -39,6 +40,7 @@ impl Renderer {
     pub fn resize(&mut self, w: f32, h: f32) {
         self.w = w;
         self.h = h;
+        self.update();
     }
 
     pub fn update(&mut self) {

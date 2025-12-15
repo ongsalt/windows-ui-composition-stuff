@@ -1,11 +1,6 @@
-use std::{mem, time::Duration};
-
-use rand::random;
 use windows::{
-    UI::{Colors, Composition::ContainerVisual},
     Win32::{
         Foundation::*,
-        Graphics::Gdi::{BeginPaint, EndPaint},
         UI::WindowsAndMessaging::*,
     },
     core::*,
@@ -79,8 +74,8 @@ fn main() -> Result<()> {
     let mut ctx = RenderContext::new(&composition_host.compositor);
 
     let root_node = DivNode::new(&mut ctx);
-    let window_size = window.size();
-    let mut renderer = Renderer::new(composition_host, Box::new(root_node), window_size);
+    let (w, h) = window.size();
+    let mut renderer = Renderer::new(composition_host, Box::new(root_node), (w, h - 30.0)); // title bar
 
     // println!("window_size {window_size:.?}");
 
@@ -97,10 +92,12 @@ fn main() -> Result<()> {
             renderer.close();
             None
         }
-        // WM_ERASEBKGND => {
-        //     // Return 1 (true) to say "I handled it" (by doing nothing)
-        //     Some(LRESULT(1))
-        // }
+        WM_SIZE => {
+            let w = (lparam.0 & 0xffff) as u16 as f32;
+            let h = (lparam.0 >> 16) as u16 as f32;
+            renderer.resize(w, h);
+            None
+        }
         WM_KEYDOWN => {
             // insert_stuff(&mut composition_host, random::<f32>() * 2000.0, 0.0);
             println!("Adding rect");

@@ -172,7 +172,7 @@ impl Node for DivNode {
 
     // rect is relative to parent
     fn place(&mut self, rect: Rect) {
-        println!("rect size: {:.?}", rect_size(&rect));
+        // println!("rect size: {:.?}", rect_size(&rect));
         self.visual.SetSize(rect_size(&rect)).unwrap();
         self.visual.SetOffset(rect_offset(&rect)).unwrap();
 
