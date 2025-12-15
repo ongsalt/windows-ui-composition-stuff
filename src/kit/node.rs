@@ -4,15 +4,18 @@
 use std::fmt::Debug;
 use std::ops::Deref;
 
+use windows::UI::Composition::{
+    CompositionBrush, CompositionRoundedRectangleGeometry, CompositionSpriteShape,
+};
 use windows::core::Interface;
 use windows::{
     Foundation::Rect,
     UI::{
         Color, Colors,
-        Composition::{Compositor, IVisual, LayerVisual, SpriteVisual, Visual},
+        Composition::{Compositor, IVisual, LayerVisual, ShapeVisual, SpriteVisual, Visual},
     },
 };
-use windows_numerics::Vector2;
+use windows_numerics::{Vector2, Vector3};
 
 use crate::kit::math::{rect_offset, rect_size};
 use crate::kit::renderer::RenderContext;
@@ -83,7 +86,8 @@ pub struct ImageNode {}
 #[derive(Debug)]
 pub struct DivNode {
     visual: LayerVisual,
-    bg_visual: SpriteVisual,
+    bg_geometry: CompositionRoundedRectangleGeometry,
+    bg_rect_obj: CompositionSpriteShape,
 
     // actual rect
     prefered_size: Vector2,
@@ -92,6 +96,13 @@ pub struct DivNode {
     // Preferences
     corner_radius: f32,
     background_color: Color,
+    opacity: f32,
+    clip: bool,
+
+    border_width: f32,
+    border_color: Color,
+
+    // shadow_opacity: f32,
 
     // Container layouting
     children: Vec<Box<dyn Node>>,
@@ -101,32 +112,46 @@ pub struct DivNode {
 impl DivNode {
     pub fn new(ctx: &mut RenderContext) -> Self {
         let visual = ctx.compositor.CreateLayerVisual().unwrap();
-        let bg_visual = ctx.compositor.CreateSpriteVisual().unwrap();
-        let background_color = Colors::Red().unwrap();
-        // shuold this be shape visual tho
+        let bg_visual = ctx.compositor.CreateShapeVisual().unwrap();
+        let bg_geometry = ctx.compositor.CreateRoundedRectangleGeometry().unwrap();
 
-        let brush = ctx.compositor
+        let bg_rect_obj = ctx
+            .compositor
+            .CreateSpriteShapeWithGeometry(&bg_geometry)
+            .unwrap();
+        let background_color = Colors::Transparent().unwrap();
+
+        let brush = ctx
+            .compositor
             .CreateColorBrushWithColor(background_color)
             .unwrap();
 
-        bg_visual.SetBrush(&brush).unwrap();
+        bg_rect_obj.SetFillBrush(&brush).unwrap();
+
+        // bg_visual.SetBrush(&brush).unwrap();
+        bg_visual.Shapes().unwrap().Append(&bg_rect_obj).unwrap();
         bg_visual.SetRelativeSizeAdjustment(Vector2::one()).unwrap();
 
         visual.Children().unwrap().InsertAtTop(&bg_visual).unwrap();
 
         Self {
             visual,
-            bg_visual,
+            bg_geometry,
+            bg_rect_obj,
             prefered_size: Vector2::zero(),
             offset: Vector2::zero(),
             background_color,
             corner_radius: 0.0,
             children: vec![],
             measured_children_sizes: vec![],
+            border_color: Colors::Red().unwrap(),
+            border_width: 0.0,
+            clip: true,
+            opacity: 1.0,
         }
     }
 
-    // TODO: implement all sway renderer expected method
+    // TODO: implement all of SwayRenderer method
     pub fn add_children(&mut self, node: Box<dyn Node>) {
         self.visual
             .Children()
@@ -145,6 +170,87 @@ impl DivNode {
             .Remove(&node.get_visual())
             .unwrap();
     }
+
+    pub fn offset(&self) -> Vector2 {
+        self.offset
+    }
+
+    pub fn corner_radius(&self) -> f32 {
+        self.corner_radius
+    }
+
+    pub fn background_color(&self) -> Color {
+        self.background_color
+    }
+
+    pub fn opacity(&self) -> f32 {
+        self.opacity
+    }
+
+    pub fn clip(&self) -> bool {
+        self.clip
+    }
+
+    pub fn border_width(&self) -> f32 {
+        self.border_width
+    }
+
+    pub fn border_color(&self) -> Color {
+        self.border_color
+    }
+
+    pub fn set_offset(&mut self, offset: Vector2) {
+        self.offset = offset;
+        // update underlying visual offset (Z = 0.0)
+        let v = Vector3 {
+            X: offset.X,
+            Y: offset.Y,
+            Z: 0.0,
+        };
+        let _ = self.visual.SetOffset(v);
+    }
+
+    pub fn set_corner_radius(&mut self, corner_radius: f32) {
+        self.corner_radius = corner_radius;
+        // try updating background visual corner radius if supported
+        self.bg_geometry
+            .SetCornerRadius(Vector2::new(corner_radius, corner_radius))
+            .unwrap();
+    }
+
+    pub fn set_background_color(&mut self, background_color: Color, ctx: &mut RenderContext) {
+        self.background_color = background_color;
+        // create and apply a color brush to the shape visual
+        if let Ok(brush) = ctx.compositor.CreateColorBrushWithColor(background_color) {
+            self.set_background_brush(brush.cast().unwrap());
+        }
+    }
+
+    pub fn set_background_brush(&mut self, brush: CompositionBrush) {
+        let _ = self.bg_rect_obj.SetFillBrush(&brush);
+    }
+
+    pub fn set_opacity(&mut self, opacity: f32) {
+        self.opacity = opacity;
+        let _ = self.visual.SetOpacity(opacity as f32);
+    }
+
+    pub fn set_clip(&mut self, clip: bool) {
+        self.clip = clip;
+        todo!()
+    }
+
+    pub fn set_border_width(&mut self, border_width: f32) {
+        self.border_width = border_width;
+        let _ = self.bg_rect_obj.SetStrokeThickness(border_width);
+    }
+
+    pub fn set_border_color(&mut self, border_color: Color, ctx: &mut RenderContext) {
+        self.border_color = border_color;
+        if let Ok(brush) = ctx.compositor.CreateColorBrushWithColor(border_color) {
+            let _ = self.bg_rect_obj.SetStrokeBrush(&brush);
+        }
+    }
 }
 
 impl Node for DivNode {
@@ -152,6 +258,8 @@ impl Node for DivNode {
         return Vector2::new(contraints.max_w, contraints.max_h);
 
         self.measured_children_sizes.clear();
+
+        // TODO: sizing mode
         let mut w = 0.0;
         let mut h = 0.0;
         // just assume its z stack
@@ -172,8 +280,10 @@ impl Node for DivNode {
 
     // rect is relative to parent
     fn place(&mut self, rect: Rect) {
+        let size = rect_size(&rect);
+        self.bg_geometry.SetSize(size).unwrap();
         // println!("rect size: {:.?}", rect_size(&rect));
-        self.visual.SetSize(rect_size(&rect)).unwrap();
+        self.visual.SetSize(size).unwrap();
         self.visual.SetOffset(rect_offset(&rect)).unwrap();
 
         for (node, size) in self.children.iter_mut().zip(&self.measured_children_sizes) {
