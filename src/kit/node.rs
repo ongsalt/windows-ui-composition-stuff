@@ -2,7 +2,6 @@
 // TODO: might do flexbox
 
 use std::fmt::Debug;
-use std::ops::Deref;
 
 use windows::UI::Composition::{
     CompositionBrush, CompositionRoundedRectangleGeometry, CompositionSpriteShape,
@@ -15,9 +14,9 @@ use windows::{
         Composition::{Compositor, IVisual, LayerVisual, ShapeVisual, SpriteVisual, Visual},
     },
 };
-use windows_numerics::{Vector2, Vector3};
+use windows_numerics::{Vector2, Vector3, Vector4};
 
-use crate::kit::math::{SizePreference, rect_offset, rect_size};
+use crate::kit::math::{Margin, SizePreference, rect_offset, rect_size};
 use crate::kit::renderer::RenderContext;
 
 #[derive(Debug, Clone, Copy)]
@@ -100,7 +99,7 @@ pub struct DivNode {
     prefered_w: SizePreference,
     prefered_h: SizePreference,
 
-    offset: Vector2,
+    margin: Margin,
 
     // Preferences
     corner_radius: f32,
@@ -150,7 +149,7 @@ impl DivNode {
             bg_rect_obj,
             prefered_w: SizePreference::Default,
             prefered_h: SizePreference::Default,
-            offset: Vector2::zero(),
+            margin: Margin::zero(),
             background_color,
             corner_radius: 0.0,
             children: vec![],
@@ -182,11 +181,6 @@ impl DivNode {
             .unwrap();
     }
 
-    // TODO: padding, margin
-    pub fn offset(&self) -> Vector2 {
-        self.offset
-    }
-
     pub fn corner_radius(&self) -> f32 {
         self.corner_radius
     }
@@ -211,8 +205,12 @@ impl DivNode {
         self.border_color
     }
 
-    pub fn set_offset(&mut self, offset: Vector2) {
-        self.offset = offset;
+    pub fn margin(&self) -> Margin {
+        self.margin
+    }
+
+    pub fn set_margin(&mut self, margin: Margin) {
+        self.margin = margin
     }
 
     pub fn set_corner_radius(&mut self, corner_radius: f32) {
@@ -302,10 +300,12 @@ impl Node for DivNode {
         let s = Vector2::new(
             self.prefered_w
                 .compute(w, constraints.min_w, constraints.max_w)
-                + 2. * self.border_width,
+                + 2. * self.border_width
+                + self.margin.w(),
             self.prefered_h
                 .compute(h, constraints.min_h, constraints.max_h)
-                + 2. * self.border_width,
+                + 2. * self.border_width
+                + self.margin.h(),
         );
         // println!("s: {:.?}", s);
         s
@@ -314,17 +314,18 @@ impl Node for DivNode {
     // rect is relative to parent
     fn place(&mut self, rect: Rect) {
         let size = rect_size(&rect);
-        let size_without_border = Vector2::new(
-            size.X - self.border_width,
-            size.Y - self.border_width,
+        let actual_size = Vector2::new(
+            size.X - self.border_width - self.margin.w(),
+            size.Y - self.border_width - self.margin.h(),
         );
-        self.bg_geometry.SetSize(size_without_border).unwrap();
+        self.bg_geometry.SetSize(actual_size).unwrap();
         self.bg_geometry
             .SetOffset(Vector2::new(
-                self.border_width / 2.0,
-                self.border_width / 2.0,
+                self.border_width / 2.0 + self.margin.left,
+                self.border_width / 2.0 + self.margin.top,
             ))
             .unwrap();
+
         // println!("rect size: {:.?}", rect_size(&rect));
         self.visual.SetSize(size).unwrap();
         self.visual.SetOffset(rect_offset(&rect)).unwrap();

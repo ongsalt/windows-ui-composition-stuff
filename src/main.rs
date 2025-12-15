@@ -7,7 +7,7 @@ use windows::{
 use crate::{
     composition_host::CompositionHost,
     kit::{
-        math::SizePreference,
+        math::{Margin, SizePreference},
         node::DivNode,
         renderer::{RenderContext, Renderer},
     },
@@ -45,7 +45,8 @@ fn main() -> Result<()> {
             node.set_background_color(Colors::White().unwrap(), &mut ctx);
             node.set_border_width(1.0);
             node.set_border_color(Colors::LightGray().unwrap(), &mut ctx);
-            node.set_corner_radius(12.0);
+            node.set_corner_radius(8.0);
+            node.set_margin(Margin::top(4.0));
             node
         };
 
