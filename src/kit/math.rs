@@ -40,9 +40,9 @@ pub enum SizePreference {
 }
 
 impl SizePreference {
-    pub fn compute(&self, computed: f32, min: f32, max: f32) -> f32 {
+    pub fn compute(&self, size: f32, min: f32, max: f32) -> f32 {
         match self {
-            SizePreference::Default => computed.clamp(min, max),
+            SizePreference::Default => size.clamp(min, max),
             SizePreference::FillAvailable => max,
             SizePreference::Fixed(i) => *i,
         }

@@ -20,14 +20,14 @@ use crate::kit::math::{Margin, SizePreference, rect_offset, rect_size};
 use crate::kit::renderer::RenderContext;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Contraints {
+pub struct Constraints {
     pub max_w: f32,
     pub min_w: f32,
     pub max_h: f32,
     pub min_h: f32,
 }
 
-impl Contraints {
+impl Constraints {
     pub fn from_size(size: Vector2) -> Self {
         Self {
             max_w: size.X,
@@ -48,7 +48,7 @@ impl Contraints {
 // know absolute position
 pub trait Node: Debug {
     // size
-    fn measure(&mut self, constraints: Contraints) -> Vector2;
+    fn measure(&mut self, constraints: Constraints) -> Vector2;
     fn place(&mut self, rect: Rect);
     fn get_visual(&self) -> Visual;
 }
@@ -62,7 +62,7 @@ pub struct TextNode {
 // WrapperNode, node without its own visual
 
 impl Node for TextNode {
-    fn measure(&mut self, constraints: Contraints) -> Vector2 {
+    fn measure(&mut self, constraints: Constraints) -> Vector2 {
         todo!()
     }
 
@@ -91,6 +91,7 @@ pub struct ImageNode {}
 // Until we have better name
 #[derive(Debug)]
 pub struct DivNode {
+    id: Option<String>,
     visual: LayerVisual,
     bg_geometry: CompositionRoundedRectangleGeometry,
     bg_rect_obj: CompositionSpriteShape,
@@ -144,6 +145,7 @@ impl DivNode {
         visual.Children().unwrap().InsertAtTop(&bg_visual).unwrap();
 
         Self {
+            id: None,
             visual,
             bg_geometry,
             bg_rect_obj,
@@ -276,19 +278,34 @@ impl DivNode {
         self.prefered_w = prefered_w;
         // TODO: mark relayout
     }
+
+    pub fn id(&self) -> Option<&String> {
+        self.id.as_ref()
+    }
+
+    pub fn set_id(&mut self, id: Option<String>) {
+        self.id = id;
+    }
 }
 
 impl Node for DivNode {
-    fn measure(&mut self, constraints: Contraints) -> Vector2 {
+    fn measure(&mut self, constraints: Constraints) -> Vector2 {
         self.measured_children_sizes.clear();
 
         // TODO: sizing mode
         let mut w = 0.0;
         let mut h = 0.0;
 
+        let children_constraints = Constraints {
+            min_h: constraints.min_h,
+            min_w: constraints.min_w,
+            max_h: constraints.max_h - self.margin.h(),
+            max_w: constraints.max_w - self.margin.w(),
+        };
         // just assume its h stack
         for c in &mut self.children {
-            let size = c.measure(constraints);
+            // well, we should decrease y too
+            let size = c.measure(children_constraints);
             // TODO: cache this size
             if size.X > w {
                 w = size.X
@@ -297,16 +314,24 @@ impl Node for DivNode {
             self.measured_children_sizes.push(size);
         }
 
-        let s = Vector2::new(
-            self.prefered_w
-                .compute(w, constraints.min_w, constraints.max_w)
-                + 2. * self.border_width
-                + self.margin.w(),
-            self.prefered_h
-                .compute(h, constraints.min_h, constraints.max_h)
-                + 2. * self.border_width
-                + self.margin.h(),
-        );
+        let w = match self.prefered_w {
+            SizePreference::Default => w + 2. * self.border_width + self.margin.w(),
+            SizePreference::FillAvailable => constraints.max_w,
+            SizePreference::Fixed(fixed) => fixed + 2. * self.border_width + self.margin.w(),
+        };
+
+        let h = match self.prefered_h {
+            SizePreference::Default => h + 2. * self.border_width + self.margin.h(),
+            SizePreference::FillAvailable => constraints.max_h,
+            SizePreference::Fixed(fixed) => fixed + 2. * self.border_width + self.margin.h(),
+        };
+
+        let s = constraints.coerce(Vector2::new(w, h));
+
+        if let Some(id) = &self.id {
+            println!("[{:.?}] measure: constraints={:.?}", id, constraints);
+            println!("[{:.?}] measure: size={:.?}", id, s);
+        };
         // println!("s: {:.?}", s);
         s
     }
@@ -318,6 +343,10 @@ impl Node for DivNode {
             size.X - self.border_width - self.margin.w(),
             size.Y - self.border_width - self.margin.h(),
         );
+        if let Some(id) = &self.id {
+            println!("[{:.?}] place: rect={:.?}", id, rect);
+            println!("[{:.?}] place: actual_size={:.?}", id, actual_size);
+        }
         self.bg_geometry.SetSize(actual_size).unwrap();
         self.bg_geometry
             .SetOffset(Vector2::new(
@@ -330,12 +359,13 @@ impl Node for DivNode {
         self.visual.SetSize(size).unwrap();
         self.visual.SetOffset(rect_offset(&rect)).unwrap();
 
-        let mut y = 0.0;
+        let mut y = self.margin.top + self.border_width;
+        let x = self.margin.left + self.border_width;
         for (node, size) in self.children.iter_mut().zip(&self.measured_children_sizes) {
             // Calculate child bounding box
             // but this is z stack tho
             let rect = Rect {
-                X: 0.0,
+                X: x,
                 Y: y,
                 Width: size.X,
                 Height: size.Y,

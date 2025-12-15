@@ -8,7 +8,7 @@ use crate::{
     composition_host::CompositionHost,
     kit::{
         math::Size,
-        node::{self, Contraints, Node},
+        node::{self, Constraints, Node},
     },
 };
 
@@ -44,7 +44,7 @@ impl Renderer {
     }
 
     pub fn update(&mut self) {
-        let size = self.root.measure(Contraints {
+        let size = self.root.measure(Constraints {
             min_h: 0.0,
             min_w: 0.0,
             max_h: self.h,

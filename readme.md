@@ -21,7 +21,9 @@ we basically have 2 tree (or 3 if using react-like api): widget tree + composito
 
 # Todos
 
-- Event handling 
+- background brush
+- shadow
+- Event handling
   - parse it (might just use winit at this point)
   - dispatch it
 - Hit testing
