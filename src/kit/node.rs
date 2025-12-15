@@ -122,6 +122,20 @@ impl DivNode {
     pub fn new(ctx: &mut RenderContext) -> Self {
         let visual = ctx.compositor.CreateLayerVisual().unwrap();
         let bg_visual = ctx.compositor.CreateShapeVisual().unwrap();
+        // let debug_visual = {
+        //     let v = ctx.compositor.CreateSpriteVisual().unwrap();
+        //     let c = Color {
+        //         R: 255,
+        //         A: 50,
+        //         B: 0,
+        //         G: 0,
+        //     };
+        //     let b = ctx.compositor.CreateColorBrushWithColor(c).unwrap();
+        //     v.SetBrush(&b).unwrap();
+        //     v.SetRelativeSizeAdjustment(Vector2::one()).unwrap();
+        //     v
+        // };
+        // visual.Children().unwrap().InsertAtBottom(&debug_visual).unwrap();
 
         let bg_geometry = ctx.compositor.CreateRoundedRectangleGeometry().unwrap();
 
@@ -287,16 +301,15 @@ impl Node for DivNode {
         // TODO: sizing mode
         let mut w = 0.0;
         let mut h = 0.0;
-        // just assume its z stack
+
+        // just assume its h stack
         for c in &mut self.children {
             let size = c.measure(constraints);
             // TODO: cache this size
             if size.X > w {
                 w = size.X
             }
-            if size.Y > h {
-                h = size.Y
-            }
+            h += size.Y;
             self.measured_children_sizes.push(size);
         }
 
@@ -315,11 +328,11 @@ impl Node for DivNode {
     // rect is relative to parent
     fn place(&mut self, rect: Rect) {
         let size = rect_size(&rect);
-        let size_with_border = Vector2::new(
-            size.X - 2. * self.border_width,
-            size.Y - 2. * self.border_width,
+        let size_without_border = Vector2::new(
+            size.X - self.border_width,
+            size.Y - self.border_width,
         );
-        self.bg_geometry.SetSize(size_with_border).unwrap();
+        self.bg_geometry.SetSize(size_without_border).unwrap();
         self.bg_geometry
             .SetOffset(Vector2::new(
                 self.border_width / 2.0,
@@ -330,15 +343,17 @@ impl Node for DivNode {
         self.visual.SetSize(size).unwrap();
         self.visual.SetOffset(rect_offset(&rect)).unwrap();
 
+        let mut y = 0.0;
         for (node, size) in self.children.iter_mut().zip(&self.measured_children_sizes) {
             // Calculate child bounding box
             // but this is z stack tho
             let rect = Rect {
                 X: 0.0,
-                Y: 0.0,
+                Y: y,
                 Width: size.X,
                 Height: size.Y,
             };
+            y += size.Y;
             node.place(rect);
         }
     }

@@ -39,15 +39,21 @@ fn main() -> Result<()> {
         div.set_prefered_h(SizePreference::FillAvailable);
         // div.set_background_color(Colors::Red().unwrap(), &mut ctx);
 
-        let mut div2 = DivNode::new(&mut ctx);
-        div2.set_prefered_h(SizePreference::Fixed(48.0));
-        div2.set_prefered_w(SizePreference::Fixed(48.0));
-        div2.set_background_color(Colors::White().unwrap(), &mut ctx);
-        div2.set_border_width(1.0);
-        div2.set_border_color(Colors::LightGray().unwrap(), &mut ctx);
-        div2.set_corner_radius(8.0);
+        let mut create_smth = || {
+            let mut div = DivNode::new(&mut ctx);
+            div.set_prefered_h(SizePreference::Fixed(64.0));
+            div.set_prefered_w(SizePreference::Fixed(64.0));
+            div.set_background_color(Colors::White().unwrap(), &mut ctx);
+            div.set_border_width(1.0);
+            div.set_border_color(Colors::LightGray().unwrap(), &mut ctx);
+            div.set_corner_radius(12.0);
+            div
+        };
 
-        div.add_children(div2);
+        div.add_children(create_smth());
+        div.add_children(create_smth());
+        div.add_children(create_smth());
+        div.add_children(create_smth());
         div
     };
 
