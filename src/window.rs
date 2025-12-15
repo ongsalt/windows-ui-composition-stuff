@@ -97,6 +97,17 @@ impl Window {
         }
     }
 
+    pub fn size(&self) -> (f32, f32) {
+        unsafe {
+            let mut lprect = std::mem::zeroed();
+            GetWindowRect(self.handle, &mut lprect);
+            (
+                (lprect.right - lprect.top) as f32,
+                (lprect.bottom - lprect.top) as f32,
+            )
+        }
+    }
+
     pub fn show(&self) {
         unsafe {
             ShowWindow(self.handle, SW_SHOW);

@@ -17,6 +17,8 @@ windows = { version = "0.62.2", features = [
   "Win32_UI_WindowsAndMessaging",
   "Win32_UI_Controls",
   "UI_Composition",
-  "UI_Composition_Desktop"
+  "UI_Composition_Desktop",
+  "UI_Text",
+  "UI_Input"
 ] }
 windows-numerics = "0.3.1"
