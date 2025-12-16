@@ -8,7 +8,7 @@ use crate::{
     composition_host::CompositionHost,
     kit::{
         math::{Margin, SizePreference},
-        node::DivNode,
+        nodes::div::DivNode,
         renderer::{RenderContext, Renderer},
     },
     window::{Window, WindowOptions},

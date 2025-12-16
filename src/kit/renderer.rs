@@ -6,10 +6,7 @@ use windows::{
 
 use crate::{
     composition_host::CompositionHost,
-    kit::{
-        math::Size,
-        node::{self, Constraints, Node},
-    },
+    kit::{math::Constraints, node::Node},
 };
 
 pub struct Renderer {
@@ -20,7 +17,7 @@ pub struct Renderer {
 }
 
 // we should actually pass RenderContext into Node instead of the actual compositor
-
+// TODO: rename to tree root or someshi
 impl Renderer {
     pub fn new(composition_host: CompositionHost, root: Box<dyn Node>, size: (f32, f32)) -> Self {
         let container: ContainerVisual = composition_host.target.Root().unwrap().cast().unwrap();

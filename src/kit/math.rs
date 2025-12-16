@@ -1,6 +1,7 @@
 use windows::Foundation::Rect;
 use windows_numerics::{Vector2, Vector3};
 
+// TODO: make this proper extension
 pub fn rect_size(rect: &Rect) -> Vector2 {
     Vector2 {
         X: rect.Width,
@@ -13,6 +14,32 @@ pub fn rect_offset(rect: &Rect) -> Vector3 {
         X: rect.X,
         Y: rect.Y,
         Z: 0.0,
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Constraints {
+    pub max_w: f32,
+    pub min_w: f32,
+    pub max_h: f32,
+    pub min_h: f32,
+}
+
+impl Constraints {
+    pub fn from_size(size: Vector2) -> Self {
+        Self {
+            max_w: size.X,
+            min_w: 0.0,
+            max_h: size.Y,
+            min_h: 0.0,
+        }
+    }
+
+    pub fn coerce(&self, size: Vector2) -> Vector2 {
+        Vector2::new(
+            size.X.clamp(self.min_w, self.max_w),
+            size.Y.clamp(self.min_h, self.max_h),
+        )
     }
 }
 
