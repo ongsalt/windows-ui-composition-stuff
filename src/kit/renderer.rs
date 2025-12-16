@@ -6,7 +6,7 @@ use windows::{
 
 use crate::{
     composition_host::CompositionHost,
-    kit::{math::Constraints, node::Node},
+    kit::{math::Constraints, node::Node, tree::NodeId},
 };
 
 pub struct Renderer {
@@ -72,5 +72,9 @@ impl RenderContext {
             compositor: compositor.clone(),
             // root_visual,
         }
+    }
+
+    pub fn invalidate(&mut self, node: NodeId) {
+        
     }
 }
