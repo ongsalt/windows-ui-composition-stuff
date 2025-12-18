@@ -1,9 +1,8 @@
 use std::{
-    collections::{HashMap, HashSet},
-    rc::Rc,
+    collections::{HashMap},
 };
-use taffy::{NodeId, PrintTree, Size, Style, TaffyTree, prelude::TaffyMaxContent};
-use windows::UI::Composition::{Compositor, ContainerVisual};
+use taffy::prelude::*;
+use windows::UI::Composition::{ContainerVisual};
 use windows::core::Interface;
 
 use crate::{

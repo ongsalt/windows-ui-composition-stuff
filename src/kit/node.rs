@@ -76,25 +76,26 @@ impl Node {
                 bg_visual,
                 bg_shape,
             } => {
-                visual.SetSize(Vector2::new(layout.size.width, layout.size.height));
-                bg_visual.SetSize(Vector2::new(layout.size.width, layout.size.height));
+                visual
+                    .SetSize(Vector2::new(layout.size.width, layout.size.height))
+                    .unwrap();
+                bg_visual
+                    .SetSize(Vector2::new(layout.size.width, layout.size.height))
+                    .unwrap();
 
-                println!("{:.?}", visual.Size().unwrap());
+                // println!("{:.?}", visual.Size().unwrap());
 
                 // let compositor = visual.Compositor().unwrap();
                 // let geometry = compositor.CreateRoundedRectangleGeometry().unwrap();
                 // bg_shape.SetGeometry(&geometry);
             }
-            Node::Leaf { visual } => todo!(),
+            Node::Leaf { visual } => {
+                visual
+                    .SetSize(Vector2::new(layout.size.width, layout.size.height))
+                    .unwrap();
+            }
         };
 
         Ok(())
-    }
-}
-
-bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct DirtyFlags: u32 {
-        const LAYOUT  = 0b00000001;
     }
 }
