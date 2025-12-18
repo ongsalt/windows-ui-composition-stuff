@@ -10,6 +10,7 @@ use windows::core::Interface;
 use windows::core::Result;
 use windows_numerics::{Vector2, Vector3};
 
+#[derive(Debug)]
 pub struct CompositionHost {
     pub compositor: Compositor,
     pub target: DesktopWindowTarget,

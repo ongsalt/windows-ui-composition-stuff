@@ -2,11 +2,14 @@ use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
 };
-
 use taffy::{NodeId, PrintTree, Size, Style, TaffyTree, prelude::TaffyMaxContent};
-use windows::UI::Composition::Compositor;
+use windows::UI::Composition::{Compositor, ContainerVisual};
+use windows::core::Interface;
 
-use crate::kit::{attribute::Attribute, node::Node};
+use crate::{
+    composition_host::CompositionHost,
+    kit::{attribute::Attribute, layout::list_dirty_node_and_relayout, node::Node},
+};
 
 type EventType = u64;
 
@@ -35,34 +38,66 @@ display: none?
 
 this tree manage event_listener/layout/hittest
 TODO: hit test
-
-how do i implement tree.update_style?
 */
+
+#[derive(Debug)]
 pub struct Tree {
-    compositor: Compositor,
+    composition_host: CompositionHost,
     // what tree tho, BackingTree?
-    nodes: HashMap<NodeId, Node>,
+    root_id: Option<NodeId>,
+    pub nodes: HashMap<NodeId, Node>,
     children: HashMap<NodeId, Vec<NodeId>>,
     // other stuff should be here too
     event_listener: HashMap<EventType, Vec<NodeId>>,
-    layout: TaffyTree,
+
+    pub layout: TaffyTree,
+    // for diff/hittest
+    pub previous_node_layouts: HashMap<NodeId, taffy::Layout>,
 }
 
 impl Tree {
-    pub fn new(compositor: Compositor) -> Self {
+    pub fn new(composition_host: CompositionHost) -> Self {
         Self {
-            compositor,
+            composition_host,
             children: HashMap::new(),
             nodes: HashMap::new(),
             event_listener: HashMap::new(),
             layout: TaffyTree::new(),
+            previous_node_layouts: HashMap::new(),
+            root_id: None,
         }
+    }
+
+    pub fn create_root(&mut self) -> NodeId {
+        let id = self.new_div();
+        self.root_id = Some(id);
+        let root = self.nodes.get(&id).unwrap();
+
+        let container: ContainerVisual =
+            self.composition_host.target.Root().unwrap().cast().unwrap();
+        container
+            .Children()
+            .unwrap()
+            .InsertAtTop(&root.visual())
+            .unwrap();
+
+        // println!(
+        //     "{:.?}",
+        //     container
+        //         .Children()
+        //         .unwrap()
+        //         .First()
+        //         .unwrap()
+        //         .Current()
+        //         .unwrap()
+        // );
+        id
     }
 
     pub fn new_div(&mut self) -> NodeId {
         // TODO: handle collision
         let node_id = self.layout.new_with_children(Style::DEFAULT, &[]).unwrap();
-        let node = Node::new_div(&self.compositor);
+        let node = Node::new_div(&self.composition_host.compositor);
 
         self.nodes.insert(node_id, node);
 
@@ -71,7 +106,7 @@ impl Tree {
 
     pub fn new_leaf(&mut self) -> NodeId {
         let node_id = self.layout.new_leaf(Style::DEFAULT).unwrap();
-        let node = Node::new_leaf(&self.compositor);
+        let node = Node::new_leaf(&self.composition_host.compositor);
 
         self.nodes.insert(node_id, node);
 
@@ -102,12 +137,15 @@ impl Tree {
 
         if attribute.is_taffy_style() {
             let mut style = self.layout.style(node_id).unwrap().clone();
+            // TODO: might make patch_taffy_style consuming
             attribute.patch_taffy_style(&mut style);
             self.layout.set_style(node_id, style).unwrap();
+
+            self.invalidate_layout(node_id);
+            // its dirty now
         } else {
             // TODO: deal with non layout stuff
             // so we need to do text layout in userland?
-            // how do i deal with this
         }
 
         // self.layout.mark_dirty(node)
@@ -120,6 +158,24 @@ impl Tree {
     // TODO: remove child at index
 
     // Transaction api?
+
+    pub fn invalidate_layout(&mut self, node_id: NodeId) {
+        let damaged_nodes = list_dirty_node_and_relayout(
+            &mut self.layout,
+            node_id,
+            &mut self.previous_node_layouts,
+        );
+
+        println!("Damaged: {:.?}", damaged_nodes);
+        for node_id in damaged_nodes {
+            let node = self.nodes.get_mut(&node_id).unwrap();
+            let layout = self.previous_node_layouts.get(&node_id).unwrap();
+
+            // update the layout
+            node.apply_layout(layout);
+            // node
+        }
+    }
 }
 
 pub enum TreeError {

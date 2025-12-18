@@ -3,15 +3,22 @@
 
 use bitflags::bitflags;
 use std::fmt::Debug;
+use taffy::Layout;
 use windows::{
-    UI::Composition::{
-        CompositionRoundedRectangleGeometry, CompositionSpriteShape, Compositor, ShapeVisual,
-        SpriteVisual, Visual,
+    UI::{
+        Composition::{
+            CompositionRoundedRectangleGeometry, CompositionSpriteShape, Compositor, ShapeVisual,
+            SpriteVisual, Visual,
+        },
+        Input::GestureRecognizer,
     },
     core::Interface,
 };
 use windows_numerics::Vector2;
 
+use crate::kit::debug::show_debug_info;
+
+#[derive(Debug)]
 pub enum Node {
     Div {
         visual: SpriteVisual,
@@ -28,6 +35,8 @@ impl Node {
         // TODO: might use LayerVisual
         let visual = compositor.CreateSpriteVisual().unwrap();
         let bg_visual = compositor.CreateShapeVisual().unwrap();
+
+        show_debug_info(&visual.cast().unwrap(), compositor);
 
         let bg_geometry = compositor.CreateRoundedRectangleGeometry().unwrap();
 
@@ -58,6 +67,28 @@ impl Node {
             Node::Div { visual, .. } => visual.cast().unwrap(),
             Node::Leaf { visual } => visual.to_owned(),
         }
+    }
+
+    pub fn apply_layout(&mut self, layout: &Layout) -> Result<(), ()> {
+        match self {
+            Node::Div {
+                visual,
+                bg_visual,
+                bg_shape,
+            } => {
+                visual.SetSize(Vector2::new(layout.size.width, layout.size.height));
+                bg_visual.SetSize(Vector2::new(layout.size.width, layout.size.height));
+
+                println!("{:.?}", visual.Size().unwrap());
+
+                // let compositor = visual.Compositor().unwrap();
+                // let geometry = compositor.CreateRoundedRectangleGeometry().unwrap();
+                // bg_shape.SetGeometry(&geometry);
+            }
+            Node::Leaf { visual } => todo!(),
+        };
+
+        Ok(())
     }
 }
 

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use taffy::prelude::*;
 
 /*
@@ -11,48 +11,54 @@ so we need to remember every node sizing info, and diff all those...
 
 start diffing at the highest damaged node
 */
-pub fn list_dirty_node(
+pub fn list_dirty_node_and_relayout(
     tree: &mut TaffyTree,
-    node_hint: taffy::NodeId,
-    previous_node_layouts: &mut HashSet<taffy::NodeId, taffy::Layout>,
+    // should it be array tho
+    node_hint: NodeId, // this must be dirty/changed by our code not taffy
+    previous_node_layouts: &mut HashMap<NodeId, taffy::Layout>,
 ) -> Vec<NodeId> {
-    // get guess?
+    // if first_run { compute_the_entire_layouts }
 
-    // firsy
-    vec![]
-}
-
-pub fn diff() {}
-
-// fuck, we still need to diff the entire subtree anyways
-pub fn list_dirty_node_nonono(tree: &TaffyTree, start_at: taffy::NodeId) -> Vec<taffy::NodeId> {
-    fn traverse(
-        tree: &TaffyTree,
-        current: taffy::NodeId,
-        visited: &mut HashSet<taffy::NodeId>,
-        dirty_nodes: &mut Vec<taffy::NodeId>,
-    ) {
-        if visited.contains(&current) {
-            return;
+    // first, get highest damaged node
+    let damaged_root = {
+        let mut node = node_hint;
+        loop {
+            let Some(parent) = tree.parent(node) else {
+                break;
+            };
+            if !tree.dirty(parent).unwrap() {
+                break;
+            }
+            node = parent;
         }
-        visited.insert(current);
+        node
+    };
 
-        if !tree.dirty(current).unwrap() {
-            return;
-        }
-        dirty_nodes.push(current);
+    // recompute
+    // TODO: text measuring
+    tree.compute_layout(damaged_root, Size::MAX_CONTENT)
+        .unwrap();
 
-        let parent = tree.parent(current).unwrap();
-        traverse(tree, parent, visited, dirty_nodes);
+    let mut damaged_nodes = vec![];
+    // We can ignore deletion becuase it was handle in other fn,
+    // mutation, addition will be mark as dirty
+    // why didnt i just make this recursive
+    let mut to_diff: Vec<NodeId> = vec![damaged_root];
 
-        for c in tree.children(current).unwrap() {
-            traverse(tree, c, visited, dirty_nodes);
-        }
+    while let Some(node) = to_diff.pop() {
+        let layout = tree.layout(node).unwrap();
+        if let Some(previous) = previous_node_layouts.get(&node)
+            && layout == previous
+        {
+            continue;
+        };
+
+        previous_node_layouts.insert(node, *layout);
+        damaged_nodes.push(node);
+        let children = tree.children(node).unwrap();
+        to_diff.extend_from_slice(&children);
     }
 
-    let mut nodes = HashSet::new();
-    let mut dirty_nodes = vec![];
-    traverse(tree, start_at, &mut nodes, &mut dirty_nodes);
-
-    dirty_nodes
+    // TODO: what if damaged_root is not dirty
+    damaged_nodes
 }
