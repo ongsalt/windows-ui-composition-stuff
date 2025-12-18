@@ -3,19 +3,10 @@ use std::{
     rc::Rc,
 };
 
-use taffy::{PrintTree, Size, Style, TaffyTree, prelude::TaffyMaxContent};
+use taffy::{NodeId, PrintTree, Size, Style, TaffyTree, prelude::TaffyMaxContent};
 use windows::UI::Composition::Compositor;
 
 use crate::kit::{attribute::Attribute, node::Node};
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Hash)]
-pub struct NodeId(u64);
-
-impl NodeId {
-    pub fn new() -> Self {
-        Self(rand::random())
-    }
-}
 
 type EventType = u64;
 
@@ -54,9 +45,6 @@ pub struct Tree {
     children: HashMap<NodeId, Vec<NodeId>>,
     // other stuff should be here too
     event_listener: HashMap<EventType, Vec<NodeId>>,
-
-    // all set size ops should target this
-    layout_id_map: HashMap<NodeId, taffy::NodeId>,
     layout: TaffyTree,
 }
 
@@ -67,32 +55,27 @@ impl Tree {
             children: HashMap::new(),
             nodes: HashMap::new(),
             event_listener: HashMap::new(),
-            layout_id_map: HashMap::new(),
             layout: TaffyTree::new(),
         }
     }
 
     pub fn new_div(&mut self) -> NodeId {
         // TODO: handle collision
-        let id = NodeId::new();
-        let taffy_node = self.layout.new_with_children(Style::DEFAULT, &[]).unwrap();
+        let node_id = self.layout.new_with_children(Style::DEFAULT, &[]).unwrap();
         let node = Node::new_div(&self.compositor);
 
-        self.nodes.insert(id, node);
-        self.layout_id_map.insert(id, taffy_node);
+        self.nodes.insert(node_id, node);
 
-        id
+        node_id
     }
 
     pub fn new_leaf(&mut self) -> NodeId {
-        let id = NodeId::new();
-        let taffy_node = self.layout.new_leaf(Style::DEFAULT).unwrap();
+        let node_id = self.layout.new_leaf(Style::DEFAULT).unwrap();
         let node = Node::new_leaf(&self.compositor);
 
-        self.nodes.insert(id, node);
-        self.layout_id_map.insert(id, taffy_node);
+        self.nodes.insert(node_id, node);
 
-        id
+        node_id
     }
 
     pub fn append_child(&mut self, parent_id: NodeId, child_id: NodeId) -> Result<(), TreeError> {
@@ -106,12 +89,9 @@ impl Tree {
             return Err(TreeError::NodeNotFound { node: child_id });
         };
 
-        let t_parent = self.layout_id_map.get(&parent_id).unwrap();
-        let t_child = self.layout_id_map.get(&child_id).unwrap();
-
         let children = self.children.entry(parent_id).or_insert(vec![]);
         children.push(child_id);
-        self.layout.add_child(*t_parent, *t_child).unwrap();
+        self.layout.add_child(parent_id, child_id).unwrap();
 
         Ok(())
     }
@@ -119,12 +99,11 @@ impl Tree {
     pub fn set_attribute(&mut self, node_id: NodeId, attribute: Attribute) {
         // TODO: remove unwrap
         let node = self.nodes.get_mut(&node_id).unwrap();
-        let layout_id = self.layout_id_map.get(&node_id).unwrap();
 
         if attribute.is_taffy_style() {
-            let mut style = self.layout.style(*layout_id).unwrap().clone();
+            let mut style = self.layout.style(node_id).unwrap().clone();
             attribute.patch_taffy_style(&mut style);
-            self.layout.set_style(*layout_id, style).unwrap();
+            self.layout.set_style(node_id, style).unwrap();
         } else {
             // TODO: deal with non layout stuff
             // so we need to do text layout in userland?
@@ -147,4 +126,3 @@ pub enum TreeError {
     NodeNotFound { node: NodeId },
     NotContainer { node: NodeId },
 }
-

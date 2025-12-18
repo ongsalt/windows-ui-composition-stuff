@@ -6,7 +6,7 @@ use windows::{
 
 use crate::{
     composition_host::CompositionHost,
-    kit::{math::Constraints, node::Node, tree::NodeId},
+    kit::{math::Constraints, node::Node},
 };
 
 pub struct Renderer {
@@ -63,5 +63,5 @@ impl RenderContext {
         }
     }
 
-    pub fn invalidate(&mut self, node: NodeId) {}
+    // pub fn invalidate(&mut self, node: NodeId) {}
 }
