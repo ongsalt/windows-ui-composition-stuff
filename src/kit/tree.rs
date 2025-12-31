@@ -158,10 +158,14 @@ impl Tree {
 
             self.invalidate_layout(node_id);
             // its dirty now
+
+            // update its bounding
         } else {
             // TODO: deal with non layout stuff
             // so we need to do text layout in userland?
         }
+        
+
 
         // self.layout.mark_dirty(node)
         // https://github.com/DioxusLabs/taffy/blob/main/examples/measure.rs

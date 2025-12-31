@@ -1,6 +1,8 @@
 use taffy::prelude::*;
 use windows::{
-    UI::{Color, Colors}, Win32::{Foundation::*, UI::WindowsAndMessaging::*}, core::*
+    UI::{Color, Colors},
+    Win32::{Foundation::*, UI::WindowsAndMessaging::*},
+    core::*,
 };
 
 use crate::{
@@ -17,8 +19,12 @@ mod window;
 fn init_tree(tree: &mut Tree) {
     let div = tree.new_div();
 
+    // fuckkk, this is not defualt
+    // tree.set_attribute(div, Attribute::BoxSizing(BoxSizing::ContentBox));
+
     tree.set_attribute(div, Attribute::Margin(Rect::length(12.0)));
-    tree.set_attribute(div, Attribute::Size(Size::length(24.0)));
+    tree.set_attribute(div, Attribute::Padding(Rect::length(12.0)));
+    tree.set_attribute(div, Attribute::Size(Size::length(80.0)));
     tree.set_attribute(div, Attribute::BackgroundColor(Colors::Blue().unwrap()));
 
     tree.append_child(tree.root().unwrap(), div).unwrap();

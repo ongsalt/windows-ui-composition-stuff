@@ -3,7 +3,7 @@
 
 use bitflags::bitflags;
 use std::fmt::Debug;
-use taffy::Layout;
+use taffy::{AbsoluteAxis, Layout};
 use windows::{
     UI::{
         Composition::{
@@ -14,7 +14,7 @@ use windows::{
     },
     core::Interface,
 };
-use windows_numerics::Vector2;
+use windows_numerics::{Vector2, Vector3};
 
 use crate::kit::debug::show_debug_info;
 
@@ -76,14 +76,29 @@ impl Node {
                 bg_visual,
                 bg_shape,
             } => {
+                // size not including padding because border-box
                 visual
-                    .SetSize(Vector2::new(layout.size.width, layout.size.height))
+                    .SetSize(Vector2::new(
+                        layout.size.width,
+                        layout.size.height,
+                    ))
                     .unwrap();
                 bg_visual
                     .SetSize(Vector2::new(layout.size.width, layout.size.height))
                     .unwrap();
 
-                // println!("{:.?}", visual.Size().unwrap());
+                // println!("{:.?}", layout);
+
+                // Translate it by topleft margin
+                // TODO: border
+
+                visual
+                    .SetOffset(Vector3::new(
+                        layout.margin.left + layout.padding.left,
+                        layout.margin.top + layout.padding.top,
+                        0.0,
+                    ))
+                    .unwrap();
 
                 // let compositor = visual.Compositor().unwrap();
                 // let geometry = compositor.CreateRoundedRectangleGeometry().unwrap();
