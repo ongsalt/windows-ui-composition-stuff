@@ -1,21 +1,28 @@
 use taffy::prelude::*;
 use windows::{
-    Win32::{Foundation::*, UI::WindowsAndMessaging::*},
-    core::*,
+    UI::{Color, Colors}, Win32::{Foundation::*, UI::WindowsAndMessaging::*}, core::*
 };
 
 use crate::{
     composition_host::CompositionHost,
-    kit::{
-        attribute::Attribute,
-        tree::Tree,
-    },
+    kit::{attribute::Attribute, tree::Tree},
     window::{Window, WindowOptions},
 };
 
 mod composition_host;
+mod interface;
 mod kit;
 mod window;
+
+fn init_tree(tree: &mut Tree) {
+    let div = tree.new_div();
+
+    tree.set_attribute(div, Attribute::Margin(Rect::length(12.0)));
+    tree.set_attribute(div, Attribute::Size(Size::length(24.0)));
+    tree.set_attribute(div, Attribute::BackgroundColor(Colors::Blue().unwrap()));
+
+    tree.append_child(tree.root().unwrap(), div).unwrap();
+}
 
 fn main() -> Result<()> {
     let options = WindowOptions::builder().build();
@@ -38,6 +45,8 @@ fn main() -> Result<()> {
             width: length(w),
         }),
     );
+
+    init_tree(&mut tree);
 
     // let div = tree.new_div();
     // println!("{:.?}", tree.nodes);

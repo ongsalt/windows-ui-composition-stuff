@@ -1,8 +1,6 @@
-use std::{
-    collections::{HashMap},
-};
+use std::collections::HashMap;
 use taffy::prelude::*;
-use windows::UI::Composition::{ContainerVisual};
+use windows::UI::Composition::ContainerVisual;
 use windows::core::Interface;
 
 use crate::{
@@ -116,6 +114,10 @@ impl Tree {
         let Some(parent) = self.nodes.get(&parent_id) else {
             return Err(TreeError::NodeNotFound { node: parent_id });
         };
+        let Some(child) = self.nodes.get(&child_id) else {
+            return Err(TreeError::NodeNotFound { node: child_id });
+        };
+
         if let Node::Leaf { .. } = parent {
             return Err(TreeError::NotContainer { node: parent_id });
         }
@@ -126,6 +128,20 @@ impl Tree {
         let children = self.children.entry(parent_id).or_insert(vec![]);
         children.push(child_id);
         self.layout.add_child(parent_id, child_id).unwrap();
+
+        let parent_visual: ContainerVisual = parent.visual().cast().unwrap();
+        parent_visual
+            .Children()
+            .unwrap()
+            .InsertAtTop(&child.visual())
+            .unwrap();
+
+        let a = parent_visual
+            .Children()
+            .unwrap()
+            .into_iter()
+            .collect::<Vec<_>>();
+        println!("Inserted {:.?}", a);
 
         Ok(())
     }
@@ -165,18 +181,23 @@ impl Tree {
             &mut self.previous_node_layouts,
         );
 
-        println!("Damaged: {:.?}", damaged_nodes);
+        // println!("Damaged: {:.?}", damaged_nodes);
         for node_id in damaged_nodes {
             let node = self.nodes.get_mut(&node_id).unwrap();
             let layout = self.previous_node_layouts.get(&node_id).unwrap();
+            // println!("{:.?} : {:.?}", node_id, layout);
 
             // update the layout
-            node.apply_layout(layout);
-            // node
+            node.apply_layout(layout).unwrap();
         }
+    }
+
+    pub fn root(&self) -> Option<taffy::NodeId> {
+        self.root_id
     }
 }
 
+#[derive(Debug)]
 pub enum TreeError {
     NodeNotFound { node: NodeId },
     NotContainer { node: NodeId },
